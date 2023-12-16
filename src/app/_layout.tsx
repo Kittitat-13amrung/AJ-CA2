@@ -36,10 +36,7 @@ export default function Layout() {
             fontWeight: 'bold',
           },
           headerTitle: props => <LogoTitle {...props} />,
-          headerRight: props => <View style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'row', columnGap: 12 }}>
-            <Button title='upload' onPress={() => router.push('/channel/upload')} />
-            <UserModal {...props} />
-          </View>,
+          headerRight: props => <UserModal {...props} />,
         }}
       />
     </SessionProvider>

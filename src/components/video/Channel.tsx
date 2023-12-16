@@ -47,7 +47,7 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
 
     return channel && (
         <Pressable onPress={() => router.push(`/channel/${channel._id}` as any)} style={styles.container}>
-            <Image style={styles.avatar} source={{ uri: channel.avatar }} />
+            <Image resizeMode='cover' style={styles.avatar} source={{ uri: channel.avatar }} />
             <View>
                 <Text style={styles.username}>{channel.username}</Text>
                 <Text style={styles.subscriber}>{subscribers} subscribers</Text>
@@ -87,7 +87,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold'
     },
     avatar: {
-        resizeMode: 'cover',
         aspectRatio: '1',
         borderRadius: 60,
         width: 45,

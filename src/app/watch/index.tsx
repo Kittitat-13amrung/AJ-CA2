@@ -3,13 +3,13 @@ import React from 'react'
 import { SimpleLineIcons } from '@expo/vector-icons';
 import YoutubePlayer , {YoutubeIframeRef} from 'react-native-youtube-iframe';
 import { View, StyleSheet, Text, Platform, useWindowDimensions, Image, FlatList, Pressable } from 'react-native'
-import VideoBox from '../../components/video/VideoBox';
 import { VideoTypes } from '../../types/VideoTypes';
 import Channel from '../../components/video/Channel';
-import Comment from '../../components/comment/Comment';
 import { CommentProps } from '../../types/CommentTypes';
-import Reply from '../../components/comment/Reply';
-import { useProfileState } from '../../hooks/useProfileState';
+import SideVideoList from '../../components/video/SideVideoList';
+import CommentView from '../../components/comment/CommentView';
+import DescriptionSection from '../../components/video/DescriptionSection';
+import { numberFormat } from '../../common/functions/numberFormat';
 
 
 type SearchParamType = {
@@ -25,15 +25,11 @@ const show = () => {
   const [videoHeight, setVideoHeight] = React.useState(height / 8);
   const [video, setVideo] = React.useState<VideoTypes>();
   const [comments, setComments] = React.useState<CommentProps[]>();
-  const loggedInChannel = useProfileState();
-
-  // expand/collapse description section
-  const [expandDesc, setExpandDesc] = React.useState<boolean>(false);
 
   // access & set Window's Width & Height before mounting
   React.useEffect(() => {
     if (Platform.OS === "web") {
-      setVideoWidth(width / 1.05);
+      setVideoWidth(width * 0.75);
       setVideoHeight(height / 9);
     }
   }, [width]);
@@ -143,9 +139,9 @@ const show = () => {
 
   // render Video view when data is present
   const shouldRenderVideoView = video && width ? (
-    <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+    <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-around', columnGap: 20 }}>
       {/* Main Content */}
-      <View>
+      <View style={{ width: '80%', paddingHorizontal: 50 }}>
         {/* Video */}
         {shouldRenderIframe}
 
@@ -166,65 +162,14 @@ const show = () => {
         </View>
 
         {/* Description Section */}
-        <Pressable disabled={expandDesc} onPress={() => setExpandDesc(true)} style={{ backgroundColor: '#05050550', borderRadius: 20, marginVertical: 20, padding: 10 }}>
-          {/* Views & Datetime */}
-          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-start', columnGap: 10, marginBottom: 10 }}>
-            <Text style={{ color: 'white' }}>
-              {numberFormat(video.views)} views
-            </Text>
-            <Text style={{ color: 'white' }}>
-              {Intl.DateTimeFormat('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              }).format(new Date(video.updatedAt))}
-            </Text>
-          </View>
-
-          {/* expand/collapse description */}
-          <>
-            {expandDesc ? (
-              <Text style={{ color: 'white' }}>{video.description}</Text>
-            ) : (
-              <Text style={{ color: 'white' }} numberOfLines={2}>{video.description}</Text>
-            )}
-            <Pressable onPress={() => setExpandDesc(!expandDesc)}>
-              <Text style={{ color: 'white', fontWeight: '600' }}>{expandDesc ? 'collapse' : '...more'}</Text>
-            </Pressable>
-          </>
-        </Pressable>
+        <DescriptionSection video={video}/>
 
         {/* Comment Section */}
-        <View>
-          {/* Comment Section Header */}
-          <View style={{ flex: 1, flexDirection: 'row' }}>
-            <Text style={{ color: 'white', fontWeight: '700', fontSize: 24 }}>{comments?.length} Comments</Text>
-          </View>
-          {/* Reply Component */}
-          <Reply updateComments={setComments} avatar={loggedInChannel?.avatar as string} to='video' id={video._id} />
-          {/* Comments */}
-          <FlatList
-            style={{ marginVertical: 30 }}
-            data={comments}
-            keyExtractor={item => item._id}
-            renderItem={({ item }) => (
-              <View>
-                <Comment comment={item} />
-              </View>
-            )} 
-            onEndReached={fetchMoreComments}
-            />
-
-        </View>
+        <CommentView comments={comments} setComments={setComments} video_id={video._id}/>
       </View>
 
       {/* Side Videos */}
-      <View style={{ width: '30%' }}>
-        <FlatList
-          data={[video]}
-          renderItem={({ item }) => <VideoBox {...video} />}
-        />
-      </View>
+      <SideVideoList videos={[video]}/>
     </View>
   ) : (
     <View style={{ minHeight: '100%', backgroundColor: '#181818' }}>
@@ -261,20 +206,5 @@ const styles = StyleSheet.create({
     height: 25
   }
 });
-
-export function numberFormat(num: number) {
-  return num > 0 ? Intl.NumberFormat('en-US', { notation: 'compact' }).format(num) : num;
-}
-
-export function rep(text: string) {
-  // Put the URL to variable $1 and Domain name
-  // to $3 after visiting the URL
-  const Rexp =
-    /(\b(https?|ftp|file):\/\/([-A-Z0-9+&@#%?=~_|!:,.;]*)([-A-Z0-9+&@#%?\/=~_|!:,.;]*)[-A-Z0-9+&@#\/%=~_|])/ig;
-
-  // Replacing the RegExp content by HTML element
-  return text.replace(Rexp,
-    "{<Link href='$1'>$3</Link>}");
-}
 
 export default show;

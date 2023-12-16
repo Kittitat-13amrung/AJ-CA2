@@ -1,12 +1,11 @@
 import React from 'react';
-import { Text, View, Image, Pressable } from 'react-native';
+import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity } from 'react-native';
 import { SimpleLineIcons } from '@expo/vector-icons';
-import CommentChildren from './Children';
-import { numberFormat } from '../../app/watch';
 import { useProfileState } from '../../hooks/useProfileState';
 import { CommentProps } from '../../types/CommentTypes';
 import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
+import { numberFormat } from '../../common/functions/numberFormat';
 
 
 type Props = {
@@ -31,16 +30,16 @@ type Props = {
 
 const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
     const [showChildren, setShowChildren] = React.useState<boolean>(false);
+    const [showCommentBody, setShowCommentBody] = React.useState<boolean>(false);
     const [children, setChildren] = React.useState<CommentProps[]>([]);
     const [fetched, setFetched] = React.useState<boolean>(false);
     const [showReplyInput, setShowReplyInput] = React.useState<boolean>(false);
     const loggedInChannel = useProfileState();
     const Reply = React.lazy(() => import('./Reply'));
-    const {session} = useSession();
+    const CommentChildren = React.lazy(() => import('./Children'));
+    const { session } = useSession();
 
-
-
-
+    // get all children comments 
     const fetchChildrenComments = (id: string) => {
         // fetch data if haven't before
         if (!fetched) {
@@ -65,19 +64,39 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
 
     }
 
+    // show reply button unless not logged in
     const handleShouldShowReplyBtn = () => {
-        if(!session) {
+        if (!session) {
             router.replace('/');
         }
 
         setShowReplyInput(true);
     }
 
+    const handleShowReadMoreBtn = (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+        console.log(e.nativeEvent);
+        console.log('test')
+    }
+
+    const [numberOfLines, setNumberOfLines] = React.useState<number>(3);
+
+    const onTextLayout = React.useCallback(
+        (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+            const MAX_LINES = 3;
+          if (e.nativeEvent.lines.length > MAX_LINES) {
+            setShowCommentBody(true);
+            setNumberOfLines(MAX_LINES);
+          }
+        console.log('test')
+        },
+        [showCommentBody]
+      );
+
     return comment && (
         <>
             <View style={{ flex: 1, flexDirection: 'row', rowGap: 10, columnGap: 20, marginVertical: 10 }}>
                 {/* Avatar */}
-                <Image style={{ width: 40, height: 40, borderRadius: 40, resizeMode: 'contain' }} source={{ uri: comment._channel_id.avatar }} />
+                <Image style={{ width: 40, height: 40, borderRadius: 40, }} resizeMode='contain' source={{ uri: comment._channel_id.avatar }} />
 
                 <View style={{ flex: 1, flexDirection: 'column' }}>
                     {/* Comment Header */}
@@ -91,7 +110,17 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
                     </View>
 
                     {/* Comment Body */}
-                    <Text style={{ color: 'white', fontSize: 16 }} numberOfLines={3}>{comment.body}</Text>
+                    <View>
+                        <Text style={{ flex: 1, flexDirection: 'row', color: 'white', fontSize: 16 }} numberOfLines={numberOfLines} onTextLayout={onTextLayout}>
+                            {comment.body}
+                        </Text>
+                        {/* Read More Btn */}
+                        <Pressable  onPress={() => setShowCommentBody(!showCommentBody)}>
+                            <Text style={{ fontWeight: '700', color: 'white', fontSize: 12 }}>
+                                {showCommentBody ? 'Collapse' : 'Read More'}
+                            </Text>
+                        </Pressable >
+                    </View>
 
                     {/* Like/Dislike & Reply Buttons */}
                     <View style={{ flex: 1, flexDirection: 'row', columnGap: 16, marginVertical: 20 }}>
@@ -117,22 +146,22 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
                     {!isChild && (
                         <View style={{ margin: 10 }}>
 
-                        {/* Amount of Replies */}
-                        {comment?.children?.length > 0 && (
-                            <>
-                                <Pressable onPress={() => fetchChildrenComments(comment._id)} style={{ width: '6%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
-                                    <Text style={{ color: 'white', fontWeight: '600' }}>{showChildren ? 'Hide Replies' : comment?.children?.length + ' Replies'}</Text>
-                                </Pressable>
+                            {/* Amount of Replies */}
+                            {comment?.children?.length > 0 && (
+                                <>
+                                    <Pressable onPress={() => fetchChildrenComments(comment._id)} style={{ width: '6%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
+                                        <Text style={{ color: 'white', fontWeight: '600' }}>{showChildren ? 'Hide Replies' : comment?.children?.length + ' Replies'}</Text>
+                                    </Pressable>
 
-                                {showChildren && (
-                                    <React.Suspense fallback={<Text style={{ color: 'white' }}>Loading...</Text>}>
-                                        <CommentChildren children={children} />
-                                    </React.Suspense>
-                                )}
-                            </>
-                        )}
+                                    {showChildren && (
+                                        <React.Suspense fallback={<Text style={{ color: 'white' }}>Loading...</Text>}>
+                                            <CommentChildren children={children} />
+                                        </React.Suspense>
+                                    )}
+                                </>
+                            )}
 
-                    </View>
+                        </View>
                     )}
 
                     {/* Reply Input Box */}

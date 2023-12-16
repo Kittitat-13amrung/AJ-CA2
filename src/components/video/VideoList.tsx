@@ -1,14 +1,15 @@
 import React from 'react'
-import { FlatList, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { FlatList, View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
 import VideoBox from './VideoBox';
 import { VideoTypes } from '../../types/VideoTypes';
 
 type Props = {
     videos: VideoTypes[];
+    onEndReached?: () => void;
 }
 
-const VideoList: React.FC<Props> = ({ videos }) => {
-    const { width } = useWindowDimensions();
+const VideoList: React.FC<Props> = ({ videos, onEndReached }) => {
+    const { width, height } = useWindowDimensions();
     const [numColumns, setNumColumns] = React.useState(calcNumColumns(width));
 
     const formatData = (data: VideoTypes[], numColumns: number) => {
@@ -54,29 +55,36 @@ const VideoList: React.FC<Props> = ({ videos }) => {
     // loading placeholder of 10 items
     const templateArr = Array(10).fill(0);
 
+    const renderItem = ({ item }) => {
+        if (item.empty) {
+            return <View style={[styles.item, styles.itemTransparent]} />;
+        }
+
+        return (
+            <View style={styles.item}>
+                <VideoBox key={item._id} _id={item._id} title={item.title} url={item.url} thumbnail={item.thumbnail} channel={item.channel} duration={item.duration} views={item.views} createdAt={item.createdAt} updatedAt={item.updatedAt} />
+            </View>
+        )
+    }
+
+    function debounce(func, timeout = 300) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
 
     return videos.length > 0 ? (
-        <View style={styles.container}>
-            <View style={styles.videoContainer}>
-                <FlatList data={formatData(videos, numColumns)} renderItem={({ item }) => {
-                    if (item.empty) {
-                        return <View style={[styles.item, styles.itemTransparent]} />;
-                    }
-
-                    return (
-                        <View style={styles.item}>
-                            <VideoBox key={item._id} _id={item._id} title={item.title} url={item.url} thumbnail={item.thumbnail} channel={item.channel} duration={item.duration} views={item.views} createdAt={item.createdAt} updatedAt={item.updatedAt} />
-                        </View>
-                    )
-                }
-                }
-                    getItemLayout={(data, index) => ({ length: 380, offset: 380 * index, index })}
-                    key={numColumns}
-                    numColumns={numColumns}
-                    maxToRenderPerBatch={20}
-                />
-            </View>
-        </View>
+        <FlatList data={formatData(videos, numColumns)} renderItem={renderItem}
+            contentContainerStyle={styles.videoContainer}
+            // showsVerticalScrollIndicator={false}
+            getItemLayout={(data, index) => ({ length: 380, offset: 380 * index, index })}
+            key={numColumns}
+            numColumns={numColumns}
+            onEndReached={({ distanceFromEnd }) => debounce(onEndReached(), 500)}
+            onEndReachedThreshold={0.5}
+        />
     ) : (
         <View style={styles.container}>
             {/* <View style={styles.videoContainer}>
@@ -124,12 +132,12 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         alignItems: 'center', // if you want to fill rows left to right
         justifyContent: 'space-around',
-        width: 'auto',
         backgroundColor: '#181818',
     },
     container: {
         backgroundColor: '#181818',
-        height: '100%',
+        // height: '100%',
+        // flex: 1,
     }
 });
 
