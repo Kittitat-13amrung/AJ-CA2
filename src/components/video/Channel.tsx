@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react'
 import { Image, StyleSheet, View, Text, Pressable } from 'react-native';
+import { useSession } from '../../contexts/AuthContext';
 
 interface channelProps {
     _id: string,
@@ -11,6 +12,7 @@ interface channelProps {
 
 const Channel: React.FC<{ _id: string }> = ({ _id }) => {
     const [channel, setChannel] = React.useState<channelProps>();
+    const {session} = useSession();
     const subscribers = React.useMemo(() => {
         if (!channel?.subscribers) return;
 
@@ -20,7 +22,7 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
 
         return numIntl.format(channel.subscribers);
 
-    }, [channel?.avatar]);
+    }, [channel?.subscribers]);
 
     React.useMemo(() => {
         fetch(`https://aj-ca-1.vercel.app/api/channels/${_id}`, {
@@ -44,6 +46,38 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
             .catch(err => console.error(err))
     }, [_id]);
 
+    const handleSubscribeBtnClicked = () => {
+        if (!session) return;
+
+        const channel = JSON.parse(session);
+
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${channel._id}/subscribe`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${channel.token}`
+            },
+        })
+            .then(async (data) => {
+                const response = await data.json();
+
+                if (data.ok) {
+                    return response;
+                }
+
+                throw response;
+            })
+            .then(res => {
+                const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
+
+                setChannel(channel => ({
+                    ...channel,
+                    subscribers: Number(subscribers) + incrementOrDecrementByOne
+                }))
+            })
+            .catch(err => console.error(err));
+    }
+
 
     return channel && (
         <Pressable onPress={() => router.push(`/channel/${channel._id}` as any)} style={styles.container}>
@@ -52,7 +86,7 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
                 <Text style={styles.username}>{channel.username}</Text>
                 <Text style={styles.subscriber}>{subscribers} subscribers</Text>
             </View>
-            <Pressable style={styles.subscriberButton}>
+            <Pressable onPress={handleSubscribeBtnClicked} style={styles.subscriberButton}>
                 <Text style={{ fontWeight: 'bold', fontSize: 14 }}>Subscribe</Text>
             </Pressable>
         </Pressable>

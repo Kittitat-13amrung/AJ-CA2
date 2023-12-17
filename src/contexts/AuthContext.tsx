@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import { useStorageState } from "../hooks/useStorageState";
-import { authTypes } from "../types";
+import { authTypes } from "src/types/AuthTypes";
 
 export const authContext = createContext<{
     signIn: (token:string) => void,
@@ -32,9 +32,9 @@ export function SessionProvider(props:React.PropsWithChildren) {
     return (
         <authContext.Provider
         value={{ 
-            signIn: (token) => {
+            signIn: (auth) => {
                 // Perform sign-in logic here
-                setSession(token);
+                setSession(JSON.stringify(auth));
             },
             signOut: () => {
                 setSession(null);

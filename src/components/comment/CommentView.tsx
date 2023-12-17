@@ -1,9 +1,10 @@
 import React from 'react'
-import { FlatList, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Text, View } from 'react-native'
 import Reply from './Reply'
 import Comment from './Comment'
 import { CommentProps } from '../../types/CommentTypes'
 import { useProfileState } from '../../hooks/useProfileState'
+import FadeIn from '../animation/FadeIn'
 
 type Props = {
     comments: CommentProps[],
@@ -11,10 +12,15 @@ type Props = {
     video_id: string
 }
 
-const CommentView:React.FC<Props> = ({comments, setComments, video_id}) => {
+const CommentView: React.FC<Props> = ({ comments, setComments, video_id }) => {
     const loggedInChannel = useProfileState();
 
-    return (
+    React.useEffect(() => {
+        console.log(comments)
+    }, [])
+
+
+    return comments ? (
         <View>
             {/* Comment Section Header */}
             <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -28,15 +34,15 @@ const CommentView:React.FC<Props> = ({comments, setComments, video_id}) => {
                 data={comments}
                 keyExtractor={item => item._id}
                 renderItem={({ item }) => (
-                    <View>
+                    <FadeIn>
                         <Comment comment={item} />
-                    </View>
+                    </FadeIn>
                 )}
-                // onEndReached={fetchMoreComments}
+            // onEndReached={fetchMoreComments}
             />
 
         </View>
-    )
+    ) : <ActivityIndicator color={"#303030"} size={50} />
 }
 
 export default CommentView

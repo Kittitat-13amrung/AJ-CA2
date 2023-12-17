@@ -9,7 +9,7 @@ type Props = {
 
 const SideVideoList:React.FC<Props> = ({videos}) => {
     return (
-        <View style={{ width: '20%' }}>
+        <View style={{ maxWidth: '17%' }}>
             <FlatList
                 data={videos}
                 renderItem={({ item }) => <VideoBox {...item} />}

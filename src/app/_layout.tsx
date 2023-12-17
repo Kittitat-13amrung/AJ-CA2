@@ -2,6 +2,7 @@ import { Stack, router, useNavigation } from 'expo-router';
 import { Button, Image, Pressable, Text, View } from 'react-native';
 import UserModal from '../components/Navigation/UserModal';
 import { SessionProvider } from '../contexts/AuthContext';
+import { PaperProvider } from 'react-native-paper';
 
 export function LogoTitle(props: React.PropsWithChildren) {
 
@@ -28,17 +29,19 @@ export function LogoTitle(props: React.PropsWithChildren) {
 export default function Layout() {
   return (
     <SessionProvider>
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: '#181818' },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-          headerTitle: props => <LogoTitle {...props} />,
-          headerRight: props => <UserModal {...props} />,
-        }}
-      />
+      <PaperProvider>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: '#181818' },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+            headerTitle: props => <LogoTitle {...props} />,
+            headerRight: props => <UserModal {...props} />,
+          }}
+        />
+      </PaperProvider>
     </SessionProvider>
   );
 }

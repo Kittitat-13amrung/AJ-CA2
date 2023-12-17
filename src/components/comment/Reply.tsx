@@ -61,6 +61,19 @@ const Reply: React.FC<Props> = (props: Props) => {
 
             const res = await reply.json();
 
+            const { createdAt, __v } = res;
+
+            const newComment = {
+                ...res,
+                _channel_id: {
+                    _id: channel._id,
+                    avatar: channel.avatar,
+                    username: channel.username
+                }
+            }
+
+            props.updateComments(comments => ([newComment, ...comments]))
+
             // console.log(res);
         } catch(err) {
             console.error(err)

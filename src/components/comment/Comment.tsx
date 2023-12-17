@@ -1,11 +1,12 @@
 import React from 'react';
-import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity } from 'react-native';
+import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SimpleLineIcons } from '@expo/vector-icons';
 import { useProfileState } from '../../hooks/useProfileState';
 import { CommentProps } from '../../types/CommentTypes';
 import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import { numberFormat } from '../../common/functions/numberFormat';
+import { TouchableRipple } from 'react-native-paper'
 
 
 type Props = {
@@ -29,6 +30,7 @@ type Props = {
 }
 
 const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
+    const [likesAndDislikes, setLikesAndDislikes] = React.useState<{ likes: number, dislikes: number }>({ likes: comment.likes, dislikes: comment.dislikes });
     const [showChildren, setShowChildren] = React.useState<boolean>(false);
     const [showCommentBody, setShowCommentBody] = React.useState<boolean>(false);
     const [children, setChildren] = React.useState<CommentProps[]>([]);
@@ -41,6 +43,7 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
 
     // get all children comments 
     const fetchChildrenComments = (id: string) => {
+        setFetched(true);
         // fetch data if haven't before
         if (!fetched) {
 
@@ -83,25 +86,103 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
     const onTextLayout = React.useCallback(
         (e: NativeSyntheticEvent<TextLayoutEventData>) => {
             const MAX_LINES = 3;
-          if (e.nativeEvent.lines.length > MAX_LINES) {
-            setShowCommentBody(true);
-            setNumberOfLines(MAX_LINES);
-          }
-        console.log('test')
+            if (e.nativeEvent.lines.length > MAX_LINES) {
+                setShowCommentBody(true);
+                setNumberOfLines(MAX_LINES);
+            }
+            console.log('test')
         },
         [showCommentBody]
-      );
+    );
+
+    const handleLikeBtnClicked = () => {
+        if (!session) return;
+
+        const channel = JSON.parse(session);
+
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${comment._id}/like`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${channel.token}`
+            },
+        })
+            .then(async (data) => {
+                const response = await data.json();
+
+                if (data.ok) {
+                    return response;
+                }
+
+                throw response;
+            })
+            .then(res => {
+                const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
+
+                setLikesAndDislikes(likesAndDislikes => ({
+                    ...likesAndDislikes,
+                    likes: likesAndDislikes.likes + incrementOrDecrementByOne
+                }))
+            })
+            .catch(err => console.error(err));
+    }
+
+    const handleDislikeBtnClicked = () => {
+        if (!session) return;
+
+        const channel = JSON.parse(session);
+
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${comment._id}/dislike`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${channel.token}`
+            },
+        })
+            .then(async (data) => {
+                const response = await data.json();
+
+                if (data.ok) {
+                    return response;
+                }
+
+                throw response;
+            })
+            .then(res => {
+                const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
+
+                setLikesAndDislikes(likesAndDislikes => ({
+                    ...likesAndDislikes,
+                    dislikes: likesAndDislikes.dislikes + incrementOrDecrementByOne
+                }))
+            })
+            .catch(err => console.error(err));
+    }
 
     return comment && (
         <>
             <View style={{ flex: 1, flexDirection: 'row', rowGap: 10, columnGap: 20, marginVertical: 10 }}>
                 {/* Avatar */}
-                <Image style={{ width: 40, height: 40, borderRadius: 40, }} resizeMode='contain' source={{ uri: comment._channel_id.avatar }} />
+                <Pressable onPress={() => router.push({
+                    pathname: '/channel/[id]',
+                    params: {
+                        id: comment._channel_id._id
+                    }
+                })}>
+                    <Image style={{ width: 40, height: 40, borderRadius: 40, }} resizeMode='contain' source={{ uri: comment._channel_id.avatar }} />
+                </Pressable>
 
                 <View style={{ flex: 1, flexDirection: 'column' }}>
                     {/* Comment Header */}
                     <View style={{ flex: 1, flexDirection: 'row', columnGap: 10 }}>
-                        <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>@{comment._channel_id.username}</Text>
+                        <Pressable onPress={() => router.push({
+                            pathname: '/channel/[id]',
+                            params: {
+                                id: comment._channel_id._id
+                            }
+                        })}>
+                            <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>@{comment._channel_id.username}</Text>
+                        </Pressable>
                         <Text style={{ color: 'white', fontSize: 14 }}>{Intl.DateTimeFormat('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -115,30 +196,38 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
                             {comment.body}
                         </Text>
                         {/* Read More Btn */}
-                        <Pressable  onPress={() => setShowCommentBody(!showCommentBody)}>
+                        <Pressable onPress={() => setShowCommentBody(!showCommentBody)}>
                             <Text style={{ fontWeight: '700', color: 'white', fontSize: 12 }}>
                                 {showCommentBody ? 'Collapse' : 'Read More'}
                             </Text>
-                        </Pressable >
+                        </Pressable>
                     </View>
 
                     {/* Like/Dislike & Reply Buttons */}
                     <View style={{ flex: 1, flexDirection: 'row', columnGap: 16, marginVertical: 20 }}>
 
-                        <SimpleLineIcons name="like" size={16} color="white" />
-                        <Text style={{ color: 'white' }}>
-                            {numberFormat(comment.likes)}
-                        </Text>
+                        <Pressable onPress={handleLikeBtnClicked}>
+                            <>
+                                <SimpleLineIcons name="like" size={16} color="white" />
+                                <Text style={{ color: 'white' }}>
+                                    {numberFormat(comment.likes)}
+                                </Text>
+                            </>
+                        </Pressable>
 
-                        <SimpleLineIcons name="dislike" size={16} color="white" />
-                        <Text style={{ color: 'white' }}>
-                            {numberFormat(comment.dislikes)}
-                        </Text>
+                        <Pressable onPress={handleDislikeBtnClicked}>
+                            <>
+                                <SimpleLineIcons name="dislike" size={16} color="white" />
+                                <Text style={{ color: 'white' }}>
+                                    {numberFormat(comment.dislikes)}
+                                </Text>
+                            </>
+                        </Pressable>
 
                         {/* Reply Component */}
-                        <Pressable onPress={handleShouldShowReplyBtn} style={{ width: '5%', height: 32, alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 6, paddingHorizontal: 6 }}>
+                        <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={handleShouldShowReplyBtn} style={{ width: '5%', height: 32, alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 6, paddingHorizontal: 6 }}>
                             <Text style={{ color: 'white', fontWeight: '600' }}>Reply</Text>
-                        </Pressable>
+                        </TouchableRipple>
 
                     </View>
 
@@ -147,14 +236,14 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
                         <View style={{ margin: 10 }}>
 
                             {/* Amount of Replies */}
-                            {comment?.children?.length > 0 && (
+                            {(comment?.children?.length > 0) && (
                                 <>
-                                    <Pressable onPress={() => fetchChildrenComments(comment._id)} style={{ width: '6%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
+                                    <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={() => fetchChildrenComments(comment._id)} style={{ width: '8%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
                                         <Text style={{ color: 'white', fontWeight: '600' }}>{showChildren ? 'Hide Replies' : comment?.children?.length + ' Replies'}</Text>
-                                    </Pressable>
+                                    </TouchableRipple>
 
                                     {showChildren && (
-                                        <React.Suspense fallback={<Text style={{ color: 'white' }}>Loading...</Text>}>
+                                        <React.Suspense fallback={<ActivityIndicator color='#303030' size={50} />}>
                                             <CommentChildren children={children} />
                                         </React.Suspense>
                                     )}
