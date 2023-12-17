@@ -16,7 +16,6 @@ const DescriptionSection: React.FC<Props> = ({ video }) => {
     return (
         <TouchableRipple
             rippleColor="rgba(0, 0, 0, .32)"
-            // disabled={true}
             onPress={() => setExpandDesc(true)}
             style={{
                 ...Platform.select({

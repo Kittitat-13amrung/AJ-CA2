@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react'
 import { Image, StyleSheet, View, Text, Pressable } from 'react-native';
+import {TouchableRipple} from 'react-native-paper';
 import { useSession } from '../../contexts/AuthContext';
 
 interface channelProps {
@@ -10,9 +11,12 @@ interface channelProps {
     subscribers: number,
 }
 
-const Channel: React.FC<{ _id: string }> = ({ _id }) => {
+const Channel: React.FC<{ _id: string, channelUpdate: any }> = ({ _id, channelUpdate }) => {
+    // init states
     const [channel, setChannel] = React.useState<channelProps>();
+    const [subbed, setSubbed] = React.useState(false);
     const {session} = useSession();
+    // subscriber formatting
     const subscribers = React.useMemo(() => {
         if (!channel?.subscribers) return;
 
@@ -24,8 +28,9 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
 
     }, [channel?.subscribers]);
 
+    // fetch channel using id
     React.useMemo(() => {
-        fetch(`https://aj-ca-1.vercel.app/api/channels/${_id}`, {
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${_id}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -40,22 +45,28 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
             })
             .then(res => {
                 setChannel(res);
-                // console.log(res)
-
             })
             .catch(err => console.error(err))
     }, [_id]);
 
+    // update subscribe state based on subscribed array
+    React.useEffect(() => {
+        if(channelUpdate?._id) {
+            setSubbed(channelUpdate.subscribed.findIndex(subbed => subbed === _id) !== -1);
+        }
+    }, [channelUpdate]);
+
+    // handle subscribe btn clicked, fetch to api and increment/decrement sub value
     const handleSubscribeBtnClicked = () => {
         if (!session) return;
 
-        const channel = JSON.parse(session);
+        const clientChannel = JSON.parse(session);
 
-        fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${channel._id}/subscribe`, {
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${_id}/subscribe`, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${channel.token}`
+                "Authorization": `Bearer ${clientChannel.token}`
             },
         })
             .then(async (data) => {
@@ -69,10 +80,10 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
             })
             .then(res => {
                 const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
-
+                setSubbed(res.type === 'increment');
                 setChannel(channel => ({
                     ...channel,
-                    subscribers: Number(subscribers) + incrementOrDecrementByOne
+                    subscribers: channel.subscribers + incrementOrDecrementByOne
                 }))
             })
             .catch(err => console.error(err));
@@ -86,9 +97,9 @@ const Channel: React.FC<{ _id: string }> = ({ _id }) => {
                 <Text style={styles.username}>{channel.username}</Text>
                 <Text style={styles.subscriber}>{subscribers} subscribers</Text>
             </View>
-            <Pressable onPress={handleSubscribeBtnClicked} style={styles.subscriberButton}>
-                <Text style={{ fontWeight: 'bold', fontSize: 14 }}>Subscribe</Text>
-            </Pressable>
+            <TouchableRipple onPress={handleSubscribeBtnClicked} rippleColor="rgba(0, 0, 0, .6)" style={styles.subscriberButton}>
+                <Text style={{ fontWeight: 'bold', fontSize: 14 }}>{subbed ? 'Subscribed' : 'Subscribe'}</Text>
+            </TouchableRipple>
         </Pressable>
     )
 }

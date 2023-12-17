@@ -1,45 +1,58 @@
 import React from 'react';
 import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SimpleLineIcons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
 import { useProfileState } from '../../hooks/useProfileState';
 import { CommentProps } from '../../types/CommentTypes';
 import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import { numberFormat } from '../../common/functions/numberFormat';
 import { TouchableRipple } from 'react-native-paper'
+import { channelType } from 'src/types/ChannelTypes';
+import CommentChildren from './Children';
 
-
-type Props = {
-    comment: {
+type CommentType = {
+    _id: string,
+    _channel_id: {
         _id: string,
-        _channel_id: {
-            _id: string,
-            avatar: string,
-            username: string,
-        },
-        body: string,
-        likes: number,
-        dislikes: number,
-        children: string[],
-        updatedAt?: Date,
-        createdAt?: Date,
-    } | null,
-    isChild?: boolean,
-    updateComments?: React.Dispatch<React.SetStateAction<CommentProps[] | undefined>>
-
+        avatar: string,
+        username: string,
+    },
+    body: string,
+    likes: number,
+    dislikes: number,
+    children: string[],
+    updatedAt?: Date,
+    createdAt?: Date,
 }
 
-const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
-    const [likesAndDislikes, setLikesAndDislikes] = React.useState<{ likes: number, dislikes: number }>({ likes: comment.likes, dislikes: comment.dislikes });
+type Props = {
+    comment: CommentType | null,
+    isChild?: boolean,
+    updateComments?: React.Dispatch<React.SetStateAction<CommentProps[] | undefined>>
+    channelUpdate: channelType
+}
+
+const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComments, channelUpdate }) => {
+    const [liked, setLiked] = React.useState(false);
+    const [disliked, setDisliked] = React.useState(false);
     const [showChildren, setShowChildren] = React.useState<boolean>(false);
-    const [showCommentBody, setShowCommentBody] = React.useState<boolean>(false);
     const [children, setChildren] = React.useState<CommentProps[]>([]);
+    const [comment, setComment] = React.useState<CommentType>();
     const [fetched, setFetched] = React.useState<boolean>(false);
     const [showReplyInput, setShowReplyInput] = React.useState<boolean>(false);
     const loggedInChannel = useProfileState();
     const Reply = React.lazy(() => import('./Reply'));
-    const CommentChildren = React.lazy(() => import('./Children'));
     const { session } = useSession();
+
+    React.useEffect(() => {
+        // initial mount
+        setComment(propComment);
+        if (channelUpdate) {
+            setLiked(channelUpdate.comment_liked.findIndex(likedComment => likedComment === propComment._id) !== -1);
+            setDisliked(channelUpdate.comment_disliked.findIndex(dislikedComment => dislikedComment === propComment._id) !== -1);
+        }
+
+    }, [channelUpdate])
 
     // get all children comments 
     const fetchChildrenComments = (id: string) => {
@@ -76,25 +89,7 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
         setShowReplyInput(true);
     }
 
-    const handleShowReadMoreBtn = (e: NativeSyntheticEvent<TextLayoutEventData>) => {
-        console.log(e.nativeEvent);
-        console.log('test')
-    }
-
-    const [numberOfLines, setNumberOfLines] = React.useState<number>(3);
-
-    const onTextLayout = React.useCallback(
-        (e: NativeSyntheticEvent<TextLayoutEventData>) => {
-            const MAX_LINES = 3;
-            if (e.nativeEvent.lines.length > MAX_LINES) {
-                setShowCommentBody(true);
-                setNumberOfLines(MAX_LINES);
-            }
-            console.log('test')
-        },
-        [showCommentBody]
-    );
-
+    // handle like btn clicked, fetch to api and increment/decrement like value
     const handleLikeBtnClicked = () => {
         if (!session) return;
 
@@ -119,14 +114,16 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
             .then(res => {
                 const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
 
-                setLikesAndDislikes(likesAndDislikes => ({
-                    ...likesAndDislikes,
-                    likes: likesAndDislikes.likes + incrementOrDecrementByOne
-                }))
+                setLiked(res.type === 'increment');
+                setComment(currentComment => ({
+                    ...currentComment,
+                    likes: currentComment.likes + incrementOrDecrementByOne
+                }));
             })
             .catch(err => console.error(err));
     }
 
+    // handle dislike btn clicked, fetch to api and increment/decrement dislike value
     const handleDislikeBtnClicked = () => {
         if (!session) return;
 
@@ -151,10 +148,11 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
             .then(res => {
                 const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
 
-                setLikesAndDislikes(likesAndDislikes => ({
-                    ...likesAndDislikes,
-                    dislikes: likesAndDislikes.dislikes + incrementOrDecrementByOne
-                }))
+                setDisliked(res.type === 'increment');
+                setComment(currentComment => ({
+                    ...currentComment,
+                    dislikes: currentComment.dislikes + incrementOrDecrementByOne
+                }));
             })
             .catch(err => console.error(err));
     }
@@ -192,36 +190,34 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
 
                     {/* Comment Body */}
                     <View>
-                        <Text style={{ flex: 1, flexDirection: 'row', color: 'white', fontSize: 16 }} numberOfLines={numberOfLines} onTextLayout={onTextLayout}>
+                        <Text style={{ flex: 1, flexDirection: 'row', color: 'white', fontSize: 16 }}>
                             {comment.body}
                         </Text>
-                        {/* Read More Btn */}
-                        <Pressable onPress={() => setShowCommentBody(!showCommentBody)}>
-                            <Text style={{ fontWeight: '700', color: 'white', fontSize: 12 }}>
-                                {showCommentBody ? 'Collapse' : 'Read More'}
-                            </Text>
-                        </Pressable>
                     </View>
 
                     {/* Like/Dislike & Reply Buttons */}
                     <View style={{ flex: 1, flexDirection: 'row', columnGap: 16, marginVertical: 20 }}>
 
-                        <Pressable onPress={handleLikeBtnClicked}>
-                            <>
-                                <SimpleLineIcons name="like" size={16} color="white" />
-                                <Text style={{ color: 'white' }}>
-                                    {numberFormat(comment.likes)}
-                                </Text>
-                            </>
+                        <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleLikeBtnClicked}>
+                            {liked ?
+                                <AntDesign name="like1" size={18} color="white" />
+                                :
+                                <AntDesign name="like2" size={18} color="white" />
+                            }
+                            <Text style={{ color: 'white' }}>
+                                {numberFormat(comment.likes)}
+                            </Text>
                         </Pressable>
 
-                        <Pressable onPress={handleDislikeBtnClicked}>
-                            <>
-                                <SimpleLineIcons name="dislike" size={16} color="white" />
-                                <Text style={{ color: 'white' }}>
-                                    {numberFormat(comment.dislikes)}
-                                </Text>
-                            </>
+                        <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleDislikeBtnClicked}>
+                            {disliked ?
+                                <AntDesign name="dislike1" size={18} color="white" />
+                                :
+                                <AntDesign name="dislike2" size={18} color="white" />
+                            }
+                            <Text style={{ color: 'white' }}>
+                                {numberFormat(comment.dislikes)}
+                            </Text>
                         </Pressable>
 
                         {/* Reply Component */}
@@ -244,7 +240,7 @@ const Comment: React.FC<Props> = ({ comment, isChild, updateComments }) => {
 
                                     {showChildren && (
                                         <React.Suspense fallback={<ActivityIndicator color='#303030' size={50} />}>
-                                            <CommentChildren children={children} />
+                                            <CommentChildren channelUpdate={channelUpdate} children={children} />
                                         </React.Suspense>
                                     )}
                                 </>

@@ -5,19 +5,17 @@ import Comment from './Comment'
 import { CommentProps } from '../../types/CommentTypes'
 import { useProfileState } from '../../hooks/useProfileState'
 import FadeIn from '../animation/FadeIn'
+import { channelType } from 'src/types/ChannelTypes'
 
 type Props = {
     comments: CommentProps[],
     setComments: React.Dispatch<React.SetStateAction<CommentProps[]>>,
-    video_id: string
+    video_id: string,
+    channelUpdate: channelType
 }
 
-const CommentView: React.FC<Props> = ({ comments, setComments, video_id }) => {
+const CommentView: React.FC<Props> = ({ comments, setComments, video_id, channelUpdate }) => {
     const loggedInChannel = useProfileState();
-
-    React.useEffect(() => {
-        console.log(comments)
-    }, [])
 
 
     return comments ? (
@@ -35,10 +33,9 @@ const CommentView: React.FC<Props> = ({ comments, setComments, video_id }) => {
                 keyExtractor={item => item._id}
                 renderItem={({ item }) => (
                     <FadeIn>
-                        <Comment comment={item} />
+                        <Comment channelUpdate={channelUpdate} comment={item} />
                     </FadeIn>
                 )}
-            // onEndReached={fetchMoreComments}
             />
 
         </View>

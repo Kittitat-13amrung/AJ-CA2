@@ -13,7 +13,11 @@ export interface channelType {
     email: string,
     avatar: string,
     videos: VideoTypes[],
-    subscriber: number,
+    subscribers: number,
+    liked?: string[],
+    disliked?: string[],
+    comment_liked?: string[],
+    comment_disliked?: string[],
     createdAt?: Date,
     updatedAt?: Date
 }

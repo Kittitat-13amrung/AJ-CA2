@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSession } from '../contexts/AuthContext';
+import { setStorageItemAsync, useStorageState } from './useStorageState';
 
 export function useProfileState() {
     const { session } = useSession();
@@ -10,6 +11,7 @@ export function useProfileState() {
         token: string
     } | null>();
 
+    // retrieve profile state from session
     React.useEffect(() => {
         const credentials: {
             _id: string,
@@ -17,11 +19,6 @@ export function useProfileState() {
             username: string,
             token: string
         } = JSON.parse(session as string);
-
-        // remove unnescessarily properties
-        // const { token } = credentials;
-
-        // console.log(credentials);
 
         setState(credentials);
     }, [session]);

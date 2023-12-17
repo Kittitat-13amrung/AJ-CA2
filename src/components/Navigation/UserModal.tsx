@@ -1,15 +1,17 @@
 import React from 'react';
-import { Alert, Modal, StyleSheet, Text, Pressable, View, Image, Button, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { Modal, StyleSheet, Text, Pressable, View, Image, Button, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { useSession } from '../../contexts/AuthContext';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import Avatar from '../channel/Avatar';
 import { useProfileState } from '../../hooks/useProfileState';
 
 const UserModal = (props: any) => {
     const [modalVisible, setModalVisible] = React.useState(false);
     const channel = useProfileState();
-    const { signOut } = useSession();
+    const { session, signOut } = useSession();
 
+    // handle sign out btn clicked
+    // redirect to login page
     const handleSignOutButton = async () => {
         signOut();
 
@@ -18,18 +20,7 @@ const UserModal = (props: any) => {
         setModalVisible(!modalVisible);
     };
 
-
-    // conditional rendering SignIn
-    // <Pressable
-    //   style={{
-    //     width: 300,
-    //     backgroundColor: '#303030'
-    //   }}
-    //   onPress={() => router.push('/channel/login')} 
-    //   >
-    //     <Image style={{ width: 25, height: 25 }} source={require('../../assets/images/user.png')} />
-    //     <Text style={{ fontSize: 16, color: 'white', fontWeight: '600' }}>Sign In</Text>
-    //   </Pressable >
+    // conditional rendering sign in if user has not logged in
     const shouldRenderSignIn = !channel ? (
         <View style={{ marginRight: 10 }}>
             <Button title="Sign In" color={'#282828'} onPress={() => router.push('/channel/login')} />

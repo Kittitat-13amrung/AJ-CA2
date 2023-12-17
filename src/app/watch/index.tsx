@@ -1,6 +1,6 @@
 import { Stack, useFocusEffect, useGlobalSearchParams, useLocalSearchParams } from 'expo-router';
 import React from 'react'
-import { SimpleLineIcons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
 import { TouchableRipple } from 'react-native-paper';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
 import { View, StyleSheet, Text, Platform, useWindowDimensions, Image, FlatList, Pressable, ActivityIndicator } from 'react-native'
@@ -12,6 +12,7 @@ import CommentView from '../../components/comment/CommentView';
 import DescriptionSection from '../../components/video/DescriptionSection';
 import { numberFormat } from '../../common/functions/numberFormat';
 import { useSession } from '../../contexts/AuthContext';
+import { channelType } from '../../types/ChannelTypes';
 
 
 type SearchParamType = {
@@ -20,15 +21,20 @@ type SearchParamType = {
 };
 
 const show = () => {
+    // init states
     const { v: id } = useGlobalSearchParams<SearchParamType>();
     const playerRef = React.useRef<YoutubeIframeRef | null>(null);
     const { width, height } = useWindowDimensions();
     const [videoWidth, setVideoWidth] = React.useState(width / 16);
     const [videoHeight, setVideoHeight] = React.useState(height / 8);
+    const [isLoading, setIsLoading] = React.useState(false);
     const [video, setVideo] = React.useState<VideoTypes>();
     const [comments, setComments] = React.useState<CommentProps[]>();
     const [videoSuggestions, setVideoSuggestions] = React.useState<VideoTypes[]>();
     const { session } = useSession();
+    const [channelUpdate, setChannelUpdate] = React.useState<channelType>();
+    const [liked, setLiked] = React.useState(false);
+    const [disliked, setDisliked] = React.useState(false);
 
     // access & set Window's Width & Height before mounting
     React.useEffect(() => {
@@ -38,103 +44,97 @@ const show = () => {
         }
     }, [width]);
 
+    // fetch video from api
     React.useEffect(() => {
+        setIsLoading(true);
         // fetch Video depending on id
-        fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}`, {
-            method: "GET"
-        })
-            .then(async (data) => {
-                const response = await data.json();
-
-                if (data.ok) {
-                    console.log(response)
-                    return response;
-                }
-
-                throw response;
+        if (id) {
+            fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}`, {
+                method: "GET"
             })
-            .then(res => {
+                .then(async (data) => {
+                    const response = await data.json();
 
-                // res.description = rep(res.description);
-                setVideo(res);
+                    if (data.ok) {
+                        return response;
+                    }
 
-                window.document.title = res.title;
-
-                fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/random/${res.tag}`, {
-                    method: "GET"
+                    throw response;
                 })
-                    .then(async (data) => {
-                        const response = await data.json();
+                .then(res => {
+                    setIsLoading(false);
+                    setVideo(res);
 
-                        if (data.ok) {
-                            // console.log(response)
-                            return response;
-                        }
+                    // set window title
+                    window.document.title = res.title;
 
-                        throw response;
+                    // fetch for random video suggestions
+                    fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/random/${res.tag}`, {
+                        method: "GET"
                     })
-                    .then(res => {
-                        setVideoSuggestions(res);
+                        .then(async (data) => {
+                            const response = await data.json();
 
-                    })
-                    .catch(err => {
-                        console.error(err);
-                    });
+                            if (data.ok) {
+                                return response;
+                            }
 
+                            throw response;
+                        })
+                        .then(res => {
+                            setVideoSuggestions(res);
+
+                        })
+                        .catch(err => {
+                            console.error(err);
+                        });
+
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+
+            // fetch comments
+            fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}/comments`, {
+                method: "GET"
             })
-            .catch(err => {
-                console.error(err);
-            });
+                .then(async (data) => {
+                    const response = await data.json();
 
-        // fetch comments
-        fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}/comments`, {
-            method: "GET"
-        })
-            .then(async (data) => {
-                const response = await data.json();
+                    if (data.ok) {
+                        // console.log(response)
+                        return response;
+                    }
 
-                if (data.ok) {
-                    // console.log(response)
-                    return response;
-                }
+                    throw response;
+                })
+                .then(res => {
+                    setComments(res);
 
-                throw response;
-            })
-            .then(res => {
-                setComments(res);
-
-            })
-            .catch(err => {
-                console.error(err);
-            });
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+        }
 
     }, [id]);
 
-    const fetchMoreComments = () => {
-        const initLength = Math.max(comments?.length as number, 10);
+    // update like and dislike states based on liked/disliked array
+    React.useEffect(() => {
+        if (session) {
+            const channel = JSON.parse(session);
+            const channelId = channel._id;
 
-        const length = initLength + 10;
-
-        fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}/comments?comment_limit=${length}`, {
-            method: "GET"
-        })
-            .then(async (data) => {
-                const response = await data.json();
-
-                if (data.ok) {
-                    return response;
-                }
-
-                throw response;
-            })
-            .then(res => {
-                setComments(res);
-
-            })
-            .catch(err => {
-                console.error(err);
-            });
-    }
+            fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${channelId}`)
+                .then(data => data.json())
+                .then(res => {
+                    setChannelUpdate(res);
+                    setLiked(res.liked.findIndex(likedVideo => likedVideo === id) !== -1);
+                    setDisliked(res.disliked.findIndex(dislikedVideo => dislikedVideo === id) !== -1);
+                })
+                .catch(err => console.error(err));
+        }
+    }, [session]);
 
     // should render Iframe for Web or Mobile
     const shouldRenderIframe = video?.url && Platform.OS === "web" ? (
@@ -154,6 +154,7 @@ const show = () => {
         />
     );
 
+    // handle like btn clicked, fetch to api and increment/decrement like value
     const handleLikeBtnClicked = () => {
         if (!session) return;
 
@@ -178,6 +179,8 @@ const show = () => {
             .then(res => {
                 const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
 
+                setLiked(res.type === 'increment');
+
                 setVideo(video => ({
                     ...video,
                     likes: video.likes + incrementOrDecrementByOne
@@ -186,6 +189,7 @@ const show = () => {
             .catch(err => console.error(err));
     }
 
+    // handle dislike btn clicked, fetch to api and increment/decrement dislike value
     const handleDislikeBtnClicked = () => {
         if (!session) return;
 
@@ -209,7 +213,7 @@ const show = () => {
             })
             .then(res => {
                 const incrementOrDecrementByOne = res.type === 'increment' ? 1 : -1
-
+                setDisliked(res.type === 'increment');
                 setVideo(video => ({
                     ...video,
                     dislikes: video.dislikes + incrementOrDecrementByOne
@@ -231,7 +235,7 @@ const show = () => {
 
                 {/* Channel & Video Descriptions */}
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Channel _id={video?.channel?._id as string} />
+                    <Channel _id={video?.channel?._id as string} channelUpdate={channelUpdate}/>
 
                     <View style={{ width: '62%' }} />
 
@@ -241,7 +245,11 @@ const show = () => {
                         {/* Like Btn */}
                         <TouchableRipple onPress={handleLikeBtnClicked} style={{ alignItems: 'center', justifyContent: 'center', height: 50, width: '50%', borderStartStartRadius: 60, borderEndStartRadius: 60, backgroundColor: '#21212190' }} rippleColor="rgba(0, 0, 0, .6)">
                             <>
-                                <SimpleLineIcons name="dislike" size={16} color="white" />
+                                {channelUpdate?._id && liked ?
+                                    <AntDesign name="like1" size={24} color="white" />
+                                    :
+                                    <AntDesign name="like2" size={24} color="white" />
+                                }
                                 <Text style={{ fontSize: 16, color: 'white' }}>{numberFormat(video.likes as number)}</Text>
                             </>
                         </TouchableRipple>
@@ -249,7 +257,11 @@ const show = () => {
                         {/* Dislike Btn */}
                         <TouchableRipple onPress={handleDislikeBtnClicked} style={{ alignItems: 'center', justifyContent: 'center', height: 50, width: '50%', borderEndEndRadius: 60, borderStartEndRadius: 60, backgroundColor: '#21212190' }} rippleColor="rgba(0, 0, 0, .6)">
                             <>
-                                <SimpleLineIcons name="dislike" size={16} color="white" />
+                            {channelUpdate?._id && disliked ?
+                                    <AntDesign name="dislike1" size={24} color="white" />
+                                    :
+                                    <AntDesign name="dislike2" size={24} color="white" />
+                                }
                                 <Text style={{ fontSize: 16, color: 'white' }}>{numberFormat(video.dislikes as number)}</Text>
                             </>
                         </TouchableRipple>
@@ -261,7 +273,7 @@ const show = () => {
                 <DescriptionSection video={video} />
 
                 {/* Comment Section */}
-                <CommentView comments={comments} setComments={setComments} video_id={video._id} />
+                <CommentView channelUpdate={channelUpdate} comments={comments} setComments={setComments} video_id={video._id} />
             </View>
 
             {/* Side Videos */}

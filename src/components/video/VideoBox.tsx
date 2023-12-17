@@ -50,11 +50,11 @@ const VideoBox = (props: VideoTypes) => {
         }
       })
 
-
+      // separate keys and values from Map
       const dateData = [...dateToUse.values()] as Number[];
       const dateKey = [...dateToUse.keys()] as string[];
 
-      // console.log(dateKey, dateData)
+      // re-format date
       const dateMap = {
         year: ' years',
         month: ' months',
@@ -64,17 +64,20 @@ const VideoBox = (props: VideoTypes) => {
         seconds: ' seconds'
       }
 
-      const m = Number(dateData[0]) > 1 ? dateMap[dateKey[0]] : (dateMap[dateKey[0]]).substring(0, (dateMap[dateKey[0]]).length - 1)
+      // if date either months, years, or days is less than 1 splice out 's' for semantic meaning 
+      const videoDate = Number(dateData[0]) > 1 ? dateMap[dateKey[0]] : (dateMap[dateKey[0]]).substring(0, (dateMap[dateKey[0]]).length - 1)
+
+      // if date is less than 1, use 'a' letter instead
       const prefix = Number(dateData) > 1 ? dateData : 'a';
 
-      setDateTime(prefix + m + ' ago.');
-
-      console.log(prefix + m)
+      // concat datetime
+      setDateTime(prefix + videoDate + ' ago.');
 
     }
   }, []);
 
   return (
+    // click to link to video
     <Pressable onPress={() => {
       router.push({
         pathname: "/watch?v=[v]",

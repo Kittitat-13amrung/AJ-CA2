@@ -14,6 +14,7 @@ const VideoList: React.FC<Props> = ({ videos, onEndReached }) => {
     const { width, height } = useWindowDimensions();
     const [numColumns, setNumColumns] = React.useState(calcNumColumns(width));
 
+    // returns added free space to make lists spread out evenly
     const formatData = (data: VideoTypes[], numColumns: number) => {
         const amountFullRows = Math.floor(data.length / numColumns);
         let amountItemsLastRow = data.length - amountFullRows * numColumns;
@@ -55,11 +56,14 @@ const VideoList: React.FC<Props> = ({ videos, onEndReached }) => {
     }, [width]);
 
 
+    // render item to FlatList
     const renderItem = ({ item }) => {
+        // if item has an empty prop, return item as empty box
         if (item.empty) {
             return <View style={[styles.item, styles.itemTransparent]} />;
         }
 
+        // else return video box
         return (
             <FadeIn>
                 <View style={styles.item}>
@@ -72,7 +76,6 @@ const VideoList: React.FC<Props> = ({ videos, onEndReached }) => {
     return videos.length > 0 ? (
         <FlatList data={formatData(videos, numColumns)} renderItem={renderItem}
             contentContainerStyle={styles.videoContainer}
-            // showsVerticalScrollIndicator={false}
             getItemLayout={(data, index) => ({ length: 380, offset: 380 * index, index })}
             key={numColumns}
             numColumns={numColumns}
@@ -86,6 +89,7 @@ const VideoList: React.FC<Props> = ({ videos, onEndReached }) => {
     );
 }
 
+// calculate number of available box to fit each column 
 const calcNumColumns = (width: number, minCols: number = 1) => {
     const cols = width / styles.item.width;
     const colsFloor = Math.floor(cols) > minCols ? Math.floor(cols) : minCols;

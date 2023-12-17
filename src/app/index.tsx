@@ -11,10 +11,12 @@ const index = () => {
     const [isLoading, setIsLoading] = React.useState<boolean>(false);
     const [error, setError] = React.useState<String>("");
 
+    // set title name
     React.useEffect(() => {
         window.document.title = 'Home';
     }, []);
 
+    // fetch videos from api based on page state
     React.useEffect(() => {
         fetch(`https://aj-ca-1.vercel.app/api/videos?limit=30&page=${page}`, {
             method: "GET",
@@ -39,9 +41,9 @@ const index = () => {
             });
     }, [page]);
 
+    // fetch for more videos when end of list is reached
     const fetchMoreVideos = () => {
         setPage(prevPage => prevPage + 1);
-        console.log(page)
     }
 
     return (

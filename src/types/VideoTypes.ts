@@ -29,6 +29,5 @@ export interface VideoTypes {
 export interface UploadFormTypes {
     title: string,
     description: string,
-    tag: string,
     thumbnail?: Blob,
 }

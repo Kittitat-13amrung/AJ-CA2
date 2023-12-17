@@ -7,12 +7,11 @@ import { router } from 'expo-router';
 import { UploadFormTypes } from 'src/types/VideoTypes';
 
 const UploadForm: React.FC = () => {
-    const { signIn } = useSession();
+    const { session } = useSession();
 
     const [form, setForm] = React.useState<UploadFormTypes>({
         title: '',
         description: '',
-        tag: '',
     });
 
     const [imagePreview, setImagePreview] = React.useState('');
@@ -26,19 +25,25 @@ const UploadForm: React.FC = () => {
     }
 
     const handleSubmit = () => {
+        if(!session) return router.push('/channel/login');
+
+        const channel = JSON.parse(session);
+
         const formData = new FormData();
 
         formData.append('title', form.title)
         formData.append('description', form.description)
-        formData.append('tag', form.tag)
         
         if(form.thumbnail) {
             // console.log(newthumbnail)
             formData.append('thumbnail', form.thumbnail)
         }
 
-        fetch('https://aj-ca-1.vercel.app/api/videos/create', {
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/create`, {
             method: 'POST',
+            headers: {
+                "Authorization": `Bearer ${channel.token}`
+            },
             body: formData,
         })
             .then(async (data) => {
@@ -51,9 +56,12 @@ const UploadForm: React.FC = () => {
                 throw response
             })
             .then(res => {
-                signIn(res);
-                router.replace('/');
-                console.log(res)
+                router.push({
+                    pathname: '/watch?v=[v]',
+                    params: {
+                        v: res._id
+                    }
+                });
             })
             .catch(err => {
                 console.error(err)
@@ -116,16 +124,6 @@ const UploadForm: React.FC = () => {
                 placeholder='Description'
                 value={form?.description}
                 onChange={(e) => handleInputChange(e, "description")}
-            />
-
-            <Text style={styles.inputTitle}>Tag:</Text>
-            <TextInput
-                id={'tag'}
-                secureTextEntry={true}
-                style={styles.input}
-                placeholder='Tag'
-                value={form?.tag}
-                onChange={(e) => handleInputChange(e, "tag")}
             />
 
             <Text style={styles.inputTitle}>Thumbnail:</Text>

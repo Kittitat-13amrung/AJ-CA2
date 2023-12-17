@@ -8,20 +8,19 @@ export function LogoTitle(props: React.PropsWithChildren) {
 
   // go to home screen
   const handleLogoClick = () => {
-    router.replace('/');
+    router.push('/');
   }
 
   // logo component
   return (
     <View style={{ flex: 0, flexWrap: "wrap", justifyContent: 'center', columnGap: 100 }}>
-      <Pressable style={{ flex: 1, flexWrap: "wrap", justifyContent: 'center', columnGap: 10 }} onPress={handleLogoClick}>
+      <Pressable style={{ flex: 1, flexWrap: "wrap", justifyContent: 'center' }} onPress={handleLogoClick}>
         <Image
-          style={{ width: 35, height: 25 }}
-          source={{ uri: 'https://advanced-js.s3.eu-west-1.amazonaws.com/download+(1).png' }}
+          style={{ width: 70, height: 70 }}
+          source={{ uri: 'https://advanced-js.s3.eu-west-1.amazonaws.com/youtube-logo-png-46016.png' }}
         />
         <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>YouTube</Text>
       </Pressable>
-      {/* <NavSearch /> */}
     </View>
   );
 }
