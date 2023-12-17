@@ -3,12 +3,26 @@ import { Modal, StyleSheet, Text, Pressable, View, Image, Button, TouchableOpaci
 import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import Avatar from '../channel/Avatar';
-import { useProfileState } from '../../hooks/useProfileState';
 
 const UserModal = (props: any) => {
     const [modalVisible, setModalVisible] = React.useState(false);
-    const channel = useProfileState();
     const { session, signOut } = useSession();
+    const [channel, setChannel] = React.useState<{
+        _id: string,
+        email: string,
+        username: string,
+        password: string,
+        avatar?: string,
+    }>();
+
+    React.useEffect(() => {
+        // console.log(session);
+        if(session) {
+            const clientChannel = JSON.parse(session);
+
+            setChannel(clientChannel);
+        }
+    }, [session]);
 
     // handle sign out btn clicked
     // redirect to login page
