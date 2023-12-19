@@ -1,9 +1,9 @@
-import { Stack, useFocusEffect, useGlobalSearchParams, useLocalSearchParams } from 'expo-router';
+import { router, useGlobalSearchParams } from 'expo-router';
 import React from 'react'
 import { AntDesign } from '@expo/vector-icons';
 import { TouchableRipple } from 'react-native-paper';
 import YoutubePlayer, { YoutubeIframeRef } from 'react-native-youtube-iframe';
-import { View, StyleSheet, Text, Platform, useWindowDimensions, Image, FlatList, Pressable, ActivityIndicator } from 'react-native'
+import { View, StyleSheet, Text, Platform, useWindowDimensions, ActivityIndicator, Button } from 'react-native'
 import { VideoTypes } from '../../types/VideoTypes';
 import Channel from '../../components/video/Channel';
 import { CommentProps } from '../../types/CommentTypes';
@@ -39,7 +39,7 @@ const show = () => {
     // access & set Window's Width & Height before mounting
     React.useEffect(() => {
         if (Platform.OS === "web") {
-            setVideoWidth(width * 0.75);
+            setVideoWidth(width * 0.7);
             setVideoHeight(height / 9);
         }
     }, [width]);
@@ -222,11 +222,56 @@ const show = () => {
             .catch(err => console.error(err));
     }
 
+    const handleDeleteButtonClicked = () => {
+        if(!session || channelUpdate._id !== video.channel._id) return;
+
+        const channel = JSON.parse(session);
+
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/videos/${id}/delete`, {
+            method: 'delete',
+            headers: {
+                "Authorization": `Bearer ${channel.token}`
+            },
+        })
+            .then(async (data) => {
+                const response = await data.json();
+
+                if (data.ok) {
+                    return response;
+                }
+
+                throw response
+            })
+            .then(res => {
+                router.push({
+                    pathname: '/channel/[id]',
+                    params: {
+                        id: channel._id
+                    }
+                });
+            })
+            .catch(err => {
+                console.error(err)
+            })
+    };
+
+    const shouldRenderEditDeleteBtn = (video?.channel?._id === channelUpdate?._id) && (
+        <View style={{ flexDirection: 'row', columnGap: 10 }}>
+            <Button title='Edit' onPress={() => router.push({
+                pathname: `/video/[id]/edit`,
+                params: {
+                    id: video._id
+                }
+            })}/>
+            <Button title='Delete' onPress={handleDeleteButtonClicked}/>
+        </View>
+    );
+
     // render Video view when data is present
     const shouldRenderVideoView = video && width ? (
         <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-around', columnGap: 20 }}>
             {/* Main Content */}
-            <View style={{ width: '80%', paddingHorizontal: 50 }}>
+            <View style={{ width: '75%', paddingHorizontal: 50 }}>
                 {/* Video */}
                 {shouldRenderIframe}
 
@@ -235,12 +280,14 @@ const show = () => {
 
                 {/* Channel & Video Descriptions */}
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Channel _id={video?.channel?._id as string} channelUpdate={channelUpdate}/>
+                    <Channel _id={video?.channel?._id as string} channelUpdate={channelUpdate} />
 
                     <View style={{ width: '62%' }} />
 
                     {/* likes and dislikes and other buttons */}
                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                        {/* Edit/Delete Buttons */}
+                        {shouldRenderEditDeleteBtn}
 
                         {/* Like Btn */}
                         <TouchableRipple onPress={handleLikeBtnClicked} style={{ alignItems: 'center', justifyContent: 'center', height: 50, width: '50%', borderStartStartRadius: 60, borderEndStartRadius: 60, backgroundColor: '#21212190' }} rippleColor="rgba(0, 0, 0, .6)">
@@ -257,7 +304,7 @@ const show = () => {
                         {/* Dislike Btn */}
                         <TouchableRipple onPress={handleDislikeBtnClicked} style={{ alignItems: 'center', justifyContent: 'center', height: 50, width: '50%', borderEndEndRadius: 60, borderStartEndRadius: 60, backgroundColor: '#21212190' }} rippleColor="rgba(0, 0, 0, .6)">
                             <>
-                            {channelUpdate?._id && disliked ?
+                                {channelUpdate?._id && disliked ?
                                     <AntDesign name="dislike1" size={24} color="white" />
                                     :
                                     <AntDesign name="dislike2" size={24} color="white" />
@@ -265,6 +312,7 @@ const show = () => {
                                 <Text style={{ fontSize: 16, color: 'white' }}>{numberFormat(video.dislikes as number)}</Text>
                             </>
                         </TouchableRipple>
+
                     </View>
 
                 </View>

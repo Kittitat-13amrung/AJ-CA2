@@ -1,23 +1,20 @@
 import React from 'react'
 import { View, TextInput, Button, NativeSyntheticEvent, TextInputChangeEventData, NativeTouchEvent } from 'react-native';
-import Avatar from '../channel/Avatar';
 import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import { CommentProps } from '../../types/CommentTypes';
 
 type Props = {
-    to: string,
     id: string,
-    avatar: string,
-    updateComments?: React.Dispatch<React.SetStateAction<CommentProps[] | undefined>>
-
+    updateComments?: React.Dispatch<React.SetStateAction<CommentProps | undefined>>
+    isEditing?: React.Dispatch<React.SetStateAction<boolean | undefined>>
 }
 
-const Reply: React.FC<Props> = (props: Props) => {
+const EditReply: React.FC<Props> = (props: Props) => {
     const [comment, setComment] = React.useState<{ body: string }>({
         body: ''
     });
-    const [showBtn, setShowBtn] = React.useState<boolean>(false);
+    const [showBtn, setShowBtn] = React.useState<boolean>(true);
 
     // when input is focused
     const handleInputFocus = (e: NativeSyntheticEvent<TextInputChangeEventData>) => {
@@ -28,7 +25,7 @@ const Reply: React.FC<Props> = (props: Props) => {
 
     // when input is blurred
     const handleInputBlur = () => {
-        setShowBtn(!showBtn);
+        props.isEditing(false);
     }
 
     // login session
@@ -39,42 +36,34 @@ const Reply: React.FC<Props> = (props: Props) => {
         if (!session) return;
 
         try {
-            const channel = JSON.parse(session);
-
-            // props.to to comment on - either video or comment
-            const resource  = {
-                video: 'https://aj-ca-1.vercel.app/api/comments/video/',
-                comment: 'https://aj-ca-1.vercel.app/api/comments/'
-            }
-
-            const replyTo = props.to;
+            const credentials = JSON.parse(session);
 
             // fetch reply
-            const reply = await fetch(`${resource[replyTo as keyof typeof resource]}${props.id}/create`, {
-                method: 'POST',
+            const reply = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${props.id}/update`, {
+                method: 'PUT',
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${channel.token}`
+                    "Authorization": `Bearer ${credentials.token}`
                 },
                 body: JSON.stringify(comment)
             });
 
             const res = await reply.json();
 
-            const { createdAt, __v } = res;
+            props.isEditing(false);
 
             const newComment = {
                 ...res,
                 _channel_id: {
-                    _id: channel._id,
-                    avatar: channel.avatar,
-                    username: channel.username
+                    _id: credentials._id,
+                    avatar: credentials.avatar,
+                    username: credentials.username
                 }
             }
 
             setComment({body: ''});
 
-            props.updateComments(comments => ([newComment, ...comments]))
+            props.updateComments(newComment);
 
             // console.log(res);
         } catch(err) {
@@ -93,7 +82,6 @@ const Reply: React.FC<Props> = (props: Props) => {
         <>
             {/* Reply Input  */}
             <View style={{ flex: 1, flexDirection: 'row', marginTop: 20, columnGap: 20 }}>
-                <Avatar avatar={props.avatar} />
                 <TextInput onFocus={handleInputFocus} onChangeText={handleInputChange} style={{ color: 'white', borderBottomColor: 'white', borderBottomWidth: 1, width: '100%', paddingVertical: 20 }} value={comment?.body} placeholder='Add a comment..' />
             </View>
 
@@ -108,4 +96,4 @@ const Reply: React.FC<Props> = (props: Props) => {
     )
 }
 
-export default Reply;
+export default EditReply;

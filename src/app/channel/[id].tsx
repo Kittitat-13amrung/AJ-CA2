@@ -8,12 +8,12 @@ import VideoList from '../../components/video/VideoList';
 import { channelType } from '../../types/ChannelTypes';
 import { numberFormat } from '../../common/functions/numberFormat';
 import {TouchableRipple} from 'react-native-paper';
-import { useSession } from '../../contexts/AuthContext';
+import { useProfileState } from '../../hooks/useProfileState';
 
 const index = () => {
+    const clientChannel = useProfileState();
     const [channel, setChannel] = React.useState<channelType>();
     const [subbed, setSubbed] = React.useState(false);
-    const {session} = useSession();
     const { id } = useLocalSearchParams();
 
     // fetch channel from api
@@ -38,9 +38,8 @@ const index = () => {
     }, [id]);
     // update subscribe state based on subscribed array
     React.useEffect(() => {
-        if (session) {
-            const channel = JSON.parse(session);
-            const channelId = channel._id;
+        if (clientChannel) {
+            const channelId = clientChannel._id;
 
             fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${channelId}`)
                 .then(data => data.json())
@@ -49,16 +48,14 @@ const index = () => {
                 })
                 .catch(err => console.error(err));
         }
-    }, [session]);
+    }, [clientChannel]);
 
     // handle subscribe btn clicked, fetch to api and increment/decrement subscriber value
     const handleSubscribeBtnClicked = () => {
         // return if not logged in or channel's id is the same as client's channel
-        if (!session) return router.push('channel/login');
+        if (!clientChannel) return router.push('channel/login');
 
-        if(JSON.parse(session)?._id === id) return;
-
-        const clientChannel = JSON.parse(session);
+        if(clientChannel._id === id) return;
 
         fetch(`${process.env.EXPO_PUBLIC_API_URL}/channels/${id}/subscribe`, {
             method: 'POST',
@@ -96,7 +93,7 @@ const index = () => {
                     <Text style={{ fontSize: 24, fontWeight: '700', color: 'white' }}>{channel?.username}</Text>
                     <Text style={{ fontSize: 16, fontWeight: '500', color: 'white' }}>{numberFormat(channel?.subscribers)} Subscribers</Text>
                 </View>
-                <TouchableRipple onPress={handleSubscribeBtnClicked} rippleColor="rgba(0, 0, 0, .6)" style={session && JSON.parse(session)?._id !== id ? styles.subscriberButton : styles.disabledBtn}>
+                <TouchableRipple onPress={handleSubscribeBtnClicked} rippleColor="rgba(0, 0, 0, .6)" style={clientChannel?._id !== id ? styles.subscriberButton : styles.disabledBtn}>
                     <Text style={{ fontWeight: 'bold', fontSize: 14 }}>{subbed ? 'Subscribed' : 'Subscribe'}</Text>
                 </TouchableRipple>
             </View>

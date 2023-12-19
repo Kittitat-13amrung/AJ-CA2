@@ -33,7 +33,7 @@ const CommentView: React.FC<Props> = ({ comments, setComments, video_id, channel
                 keyExtractor={item => item._id}
                 renderItem={({ item }) => (
                     <FadeIn>
-                        <Comment channelUpdate={channelUpdate} comment={item} />
+                        <Comment updateComments={setComments} channelUpdate={channelUpdate} comment={item} />
                     </FadeIn>
                 )}
             />

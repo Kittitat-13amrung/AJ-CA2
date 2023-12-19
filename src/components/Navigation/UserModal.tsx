@@ -4,7 +4,7 @@ import { useSession } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import Avatar from '../channel/Avatar';
 
-const UserModal = (props: any) => {
+const UserModal = () => {
     const [modalVisible, setModalVisible] = React.useState(false);
     const { session, signOut } = useSession();
     const [channel, setChannel] = React.useState<{
@@ -16,13 +16,13 @@ const UserModal = (props: any) => {
     }>();
 
     React.useEffect(() => {
-        // console.log(session);
         if(session) {
-            const clientChannel = JSON.parse(session);
+            const credentials = JSON.parse(session);
+            console.log(credentials);
 
-            setChannel(clientChannel);
+            setChannel(credentials);
         }
-    }, [session]);
+    }, []);
 
     // handle sign out btn clicked
     // redirect to login page
@@ -60,15 +60,20 @@ const UserModal = (props: any) => {
                             <View style={styles.modalView}>
                                 {/* <Text style={styles.modalText}>Hello World!</Text> */}
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingBottom: 10, marginBottom: 10, columnGap: 20, borderBottomColor: '#404040', borderBottomWidth: 1 }}>
-                                    <Avatar avatar={channel?.avatar} />
-                                    <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>@{channel?.username}</Text>
+                                    <Avatar avatar={channel.avatar} />
+                                    <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>@{channel.username}</Text>
                                 </View>
 
                                 {/* Channel */}
                                 <View style={{ flex: 1, flexDirection: 'column', rowGap: 10, alignItems: 'flex-end' }}>
                                     <Pressable
-                                        onPress={() => router.push(`/channel/${channel?._id}` as any)}>
+                                        onPress={() => router.push(`/channel/${channel._id}` as any)}>
                                         <Text style={styles.textStyle}>Your Channel</Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        onPress={() => router.push(`/channel/${channel._id}/edit` as any)}>
+                                        <Text style={styles.textStyle}>Channel Setting</Text>
                                     </Pressable>
 
                                     <Pressable

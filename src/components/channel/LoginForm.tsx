@@ -89,6 +89,12 @@ const LoginForm: React.FC = () => {
                 color="#262626"
                 accessibilityLabel="Submit form"
             />
+            <Button
+                onPress={() => router.push('/channel/register')}
+                title="Register"
+                color="#262626"
+                accessibilityLabel="Submit form"
+            />
         </View>
     )
 }

@@ -7,6 +7,13 @@ export interface RegisterFormTypes {
     avatar?: Blob,
 }
 
+export interface UpdateFormTypes {
+    email?: string,
+    username?: string,
+    password?: string,
+    avatar?: Blob,
+}
+
 export interface channelType {
     _id: string,
     username: string,

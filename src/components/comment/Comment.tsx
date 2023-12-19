@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, View, Image, Pressable, NativeSyntheticEvent, TextLayoutEventData, TouchableOpacity, ActivityIndicator, Button } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useProfileState } from '../../hooks/useProfileState';
 import { CommentProps } from '../../types/CommentTypes';
@@ -9,6 +9,7 @@ import { numberFormat } from '../../common/functions/numberFormat';
 import { TouchableRipple } from 'react-native-paper'
 import { channelType } from 'src/types/ChannelTypes';
 import CommentChildren from './Children';
+import EditReply from './EditReply';
 
 type CommentType = {
     _id: string,
@@ -35,6 +36,7 @@ type Props = {
 const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComments, channelUpdate }) => {
     const [liked, setLiked] = React.useState(false);
     const [disliked, setDisliked] = React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
     const [showChildren, setShowChildren] = React.useState<boolean>(false);
     const [children, setChildren] = React.useState<CommentProps[]>([]);
     const [comment, setComment] = React.useState<CommentType>();
@@ -93,13 +95,13 @@ const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComment
     const handleLikeBtnClicked = () => {
         if (!session) return;
 
-        const channel = JSON.parse(session);
+        const credentials = JSON.parse(session);
 
         fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${comment._id}/like`, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${channel.token}`
+                "Authorization": `Bearer ${credentials.token}`
             },
         })
             .then(async (data) => {
@@ -127,13 +129,13 @@ const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComment
     const handleDislikeBtnClicked = () => {
         if (!session) return;
 
-        const channel = JSON.parse(session);
+        const credentials = JSON.parse(session);
 
         fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${comment._id}/dislike`, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${channel.token}`
+                "Authorization": `Bearer ${credentials.token}`
             },
         })
             .then(async (data) => {
@@ -156,6 +158,46 @@ const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComment
             })
             .catch(err => console.error(err));
     }
+
+    // handle delete button clicked
+    const handleDeleteButtonClicked = () => {
+        if(!session || channelUpdate._id !== comment._channel_id._id) return;
+
+        const credentials = JSON.parse(session);
+
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/comments/${comment._id}/delete`, {
+            method: 'delete',
+            headers: {
+                "Authorization": `Bearer ${credentials.token}`
+            },
+        })
+            .then(async (data) => {
+                const response = await data.json();
+
+                if (data.ok) {
+                    return response;
+                }
+
+                throw response
+            })
+            .then(res => {
+                updateComments(comments => {
+                    const newComments = comments.filter(oldComment => oldComment._id !== comment._id);
+
+                    return newComments;
+                })
+            })
+            .catch(err => {
+                console.error(err)
+            })
+    };
+
+    const shouldRenderEditDeleteBtn = (comment?._channel_id._id === channelUpdate?._id) && (
+        <View style={{ flexDirection: 'row', columnGap: 10 }}>
+            <Button title='Edit' onPress={() => setIsEditing(true)} />
+            <Button title='Delete' onPress={handleDeleteButtonClicked}/>
+        </View>
+    );
 
     return comment && (
         <>
@@ -186,81 +228,87 @@ const Comment: React.FC<Props> = ({ comment: propComment, isChild, updateComment
                             day: 'numeric',
                             year: 'numeric'
                         }).format(new Date(comment?.updatedAt as Date))}</Text>
+
+                        {shouldRenderEditDeleteBtn}
                     </View>
 
                     {/* Comment Body */}
                     <View>
-                        <Text style={{ flex: 1, flexDirection: 'row', color: 'white', fontSize: 16 }}>
-                            {comment.body}
-                        </Text>
-                    </View>
-
-                    {/* Like/Dislike & Reply Buttons */}
-                    <View style={{ flex: 1, flexDirection: 'row', columnGap: 16, marginVertical: 20 }}>
-
-                        <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleLikeBtnClicked}>
-                            {liked ?
-                                <AntDesign name="like1" size={18} color="white" />
-                                :
-                                <AntDesign name="like2" size={18} color="white" />
-                            }
-                            <Text style={{ color: 'white' }}>
-                                {numberFormat(comment.likes)}
-                            </Text>
-                        </Pressable>
-
-                        <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleDislikeBtnClicked}>
-                            {disliked ?
-                                <AntDesign name="dislike1" size={18} color="white" />
-                                :
-                                <AntDesign name="dislike2" size={18} color="white" />
-                            }
-                            <Text style={{ color: 'white' }}>
-                                {numberFormat(comment.dislikes)}
-                            </Text>
-                        </Pressable>
-
-                        {/* Reply Component */}
-                        <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={handleShouldShowReplyBtn} style={{ width: '5%', height: 32, alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 6, paddingHorizontal: 6 }}>
-                            <Text style={{ color: 'white', fontWeight: '600' }}>Reply</Text>
-                        </TouchableRipple>
-
-                    </View>
-
-                    {/* Children Comment Header */}
-                    {!isChild && (
-                        <View style={{ margin: 10 }}>
-
-                            {/* Amount of Replies */}
-                            {(comment?.children?.length > 0) && (
-                                <>
-                                    <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={() => fetchChildrenComments(comment._id)} style={{ width: '8%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
-                                        <Text style={{ color: 'white', fontWeight: '600' }}>{showChildren ? 'Hide Replies' : comment?.children?.length + ' Replies'}</Text>
-                                    </TouchableRipple>
-
-                                    {showChildren && (
-                                        <React.Suspense fallback={<ActivityIndicator color='#303030' size={50} />}>
-                                            <CommentChildren channelUpdate={channelUpdate} children={children} />
-                                        </React.Suspense>
-                                    )}
-                                </>
-                            )}
-
-                        </View>
-                    )}
-
-                    {/* Reply Input Box */}
-                    {
-                        (!isChild && showReplyInput) && (
-                            <React.Suspense>
-                                {/* Reply Component */}
-                                <Reply updateComments={updateComments} avatar={loggedInChannel?.avatar as string} to='comment' id={comment._id} />
-                            </React.Suspense>
-                        )
-                    }
+                        {isEditing ? (
+                            <EditReply id={comment._id} updateComments={setComment} isEditing={setIsEditing}/>
+                        ): (
+                            <Text style = {{ flex: 1, flexDirection: 'row', color: 'white', fontSize: 16 }}>
+                        {comment.body}
+                    </Text>
+                        )}
                 </View>
 
+                {/* Like/Dislike & Reply Buttons */}
+                <View style={{ flex: 1, flexDirection: 'row', columnGap: 16, marginVertical: 20 }}>
+
+                    <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleLikeBtnClicked}>
+                        {liked ?
+                            <AntDesign name="like1" size={18} color="white" />
+                            :
+                            <AntDesign name="like2" size={18} color="white" />
+                        }
+                        <Text style={{ color: 'white' }}>
+                            {numberFormat(comment.likes)}
+                        </Text>
+                    </Pressable>
+
+                    <Pressable style={{ flexDirection: 'row', columnGap: 10 }} onPress={handleDislikeBtnClicked}>
+                        {disliked ?
+                            <AntDesign name="dislike1" size={18} color="white" />
+                            :
+                            <AntDesign name="dislike2" size={18} color="white" />
+                        }
+                        <Text style={{ color: 'white' }}>
+                            {numberFormat(comment.dislikes)}
+                        </Text>
+                    </Pressable>
+
+                    {/* Reply Component */}
+                    <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={handleShouldShowReplyBtn} style={{ width: '5%', height: 32, alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 6, paddingHorizontal: 6 }}>
+                        <Text style={{ color: 'white', fontWeight: '600' }}>Reply</Text>
+                    </TouchableRipple>
+
+                </View>
+
+                {/* Children Comment Header */}
+                {!isChild && (
+                    <View style={{ margin: 10 }}>
+
+                        {/* Amount of Replies */}
+                        {(comment?.children?.length > 0) && (
+                            <>
+                                <TouchableRipple rippleColor="rgba(0, 0, 0, .6)" onPress={() => fetchChildrenComments(comment._id)} style={{ width: '8%', alignItems: 'center', borderRadius: 20, backgroundColor: '#303030', paddingVertical: 12, paddingHorizontal: 12, marginBottom: 12 }}>
+                                    <Text style={{ color: 'white', fontWeight: '600' }}>{showChildren ? 'Hide Replies' : comment?.children?.length + ' Replies'}</Text>
+                                </TouchableRipple>
+
+                                {showChildren && (
+                                    <React.Suspense fallback={<ActivityIndicator color='#303030' size={50} />}>
+                                        <CommentChildren channelUpdate={channelUpdate} children={children} />
+                                    </React.Suspense>
+                                )}
+                            </>
+                        )}
+
+                    </View>
+                )}
+
+                {/* Reply Input Box */}
+                {
+                    (!isChild && showReplyInput) && (
+                        <React.Suspense>
+                            {/* Reply Component */}
+                            <Reply updateComments={updateComments} avatar={loggedInChannel?.avatar as string} to='comment' id={comment._id} />
+                        </React.Suspense>
+                    )
+                }
             </View>
+
+        </View >
 
         </>
     )

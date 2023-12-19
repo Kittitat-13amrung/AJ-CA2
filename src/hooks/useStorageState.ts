@@ -19,7 +19,7 @@ export async function setStorageItemAsync(key: string, value: string | null) {
       if (value === null) {
         localStorage.removeItem(key);
       } else {
-        localStorage.setItem(key, JSON.stringify(value));
+        localStorage.setItem(key, value);
       }
     } catch (e) {
       console.error('Local storage is unavailable:', e);

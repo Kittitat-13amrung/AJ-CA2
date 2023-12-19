@@ -1,8 +1,8 @@
 import { Stack, router, useNavigation } from 'expo-router';
 import { Button, Image, Pressable, Text, View } from 'react-native';
-import UserModal from '../components/Navigation/UserModal';
 import { SessionProvider } from '../contexts/AuthContext';
 import { PaperProvider } from 'react-native-paper';
+import UserModal from '../components/Navigation/UserModal';
 
 export function LogoTitle(props: React.PropsWithChildren) {
 
@@ -37,7 +37,7 @@ export default function Layout() {
               fontWeight: 'bold',
             },
             headerTitle: props => <LogoTitle {...props} />,
-            headerRight: props => <UserModal {...props} />,
+            headerRight: props => <UserModal />,
           }}
         />
       </PaperProvider>
